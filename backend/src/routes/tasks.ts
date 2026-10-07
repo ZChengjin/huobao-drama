@@ -5,9 +5,28 @@ import { success, created, badRequest } from '../utils/response.js'
 import { generateImage, generateVideo } from '../services/generation.js'
 import { getActiveConfig, getConfigById } from '../services/ai.js'
 import { getDramaStylePrompt } from '../services/style-preset.js'
+import { getVideoQueueStatus, setVideoQueueEnabled } from '../services/video-queue.js'
 import { logTaskError, logTaskPayload, logTaskStart, logTaskSuccess } from '../utils/task-logger.js'
 
 const app = new Hono()
+
+// 视频自动生成队列控制端点（两段路径，与 /tasks/:id 单段不冲突）
+// GET /tasks/video-queue/status — 查询视频自动生成队列状态
+app.get('/video-queue/status', async (c) => {
+  return success(c, getVideoQueueStatus())
+})
+
+// POST /tasks/video-queue/start — 启动视频自动生成队列
+app.post('/video-queue/start', async (c) => {
+  setVideoQueueEnabled(true)
+  return success(c, { enabled: true, status: getVideoQueueStatus() })
+})
+
+// POST /tasks/video-queue/stop — 停止视频自动生成队列
+app.post('/video-queue/stop', async (c) => {
+  setVideoQueueEnabled(false)
+  return success(c, { enabled: false, status: getVideoQueueStatus() })
+})
 
 type TaskType = 'image' | 'video'
 

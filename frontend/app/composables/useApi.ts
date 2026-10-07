@@ -103,6 +103,10 @@ export const taskAPI = {
   },
   // 按集聚合生成任务（sys_task + video_merges）
   listByEpisode: (episodeId: number) => api.get<{ tasks: any[]; merges: any[] }>(`/episodes/${episodeId}/generation-tasks`),
+  // 视频自动生成队列（后台每 5 分钟按镜头顺序触发一个未完成视频任务）
+  videoQueueStatus: () => api.get<{ state: string; enabled: boolean; last_run_at?: string; last_error?: string }>('/tasks/video-queue/status'),
+  videoQueueStart: () => api.post('/tasks/video-queue/start'),
+  videoQueueStop: () => api.post('/tasks/video-queue/stop'),
 }
 
 async function uploadReq<T = any>(path: string, file: File): Promise<T> {

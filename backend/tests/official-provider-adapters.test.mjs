@@ -58,7 +58,7 @@ test('backend rejects unsupported providers at DB and route boundaries', () => {
   assert.match(ai, /officialProviders/)
   assert.match(ai, /text:\s*\[\s*'openai',\s*'gemini',\s*'volcengine'\s*\]/)
   assert.match(ai, /image:\s*\[\s*'openai',\s*'gemini',\s*'volcengine'\s*\]/)
-  assert.match(ai, /video:\s*\[\s*'volcengine',\s*'minimax',\s*'aliyun'\s*\]/)
+  assert.match(ai, /video:\s*\[\s*'volcengine',\s*'minimax',\s*'aliyun',\s*'openai'\s*\]/)
   assert.doesNotMatch(ai, /'deepseek'/)
   assert.doesNotMatch(ai, /'ali'/)
   assert.doesNotMatch(ai, /'vidu'/)
@@ -116,6 +116,8 @@ test('AI config probe uses provider-specific auth schemes', () => {
   assert.match(route, /url\.searchParams\.set\('key', apiKey\)/)
   assert.match(route, /function bearerHeaders/)
   assert.match(route, /p === 'openai'/)
+  // OpenAI 兼容视频（Agnes）：POST {base}/v1/videos 空体探测
+  assert.match(route, /serviceType === 'video'[\s\S]*'\/v1',\s*'\/videos'/)
   assert.match(route, /p === 'volcengine'/)
   assert.match(route, /p === 'minimax'/)
   assert.match(route, /p === 'aliyun'/)
@@ -171,7 +173,6 @@ test('new image and video models use their current API shapes', () => {
   const geminiImage = read('src/services/adapters/gemini-image.ts')
   const volcVideo = read('src/services/adapters/volcengine-video.ts')
   const wanVideo = read('src/services/adapters/aliyun-wan-video.ts')
-
   assert.match(openaiImage, /isGptImage2/)
   assert.match(openaiImage, /normalizeGptImage2Size/)
   assert.match(geminiImage, /isGemini3Image/)
@@ -194,4 +195,21 @@ test('new image and video models use their current API shapes', () => {
   assert.match(wanVideo, /\/tasks\/\$\{encodeURIComponent\(taskId\)\}/)
   assert.match(wanVideo, /output\.task_status/)
   assert.match(wanVideo, /output_video_duration/)
+})
+
+test('OpenAI-compatible video adapter (Agnes) implements task create + agnesapi poll', () => {
+  const adapter = read('src/services/adapters/openai-video.ts')
+  const registry = read('src/services/adapters/registry.ts')
+
+  assert.match(adapter, /agnes-video-2\.5-flash/)
+  // 创建任务走 OpenAI Videos 兼容端点 POST {base}/v1/videos
+  assert.match(adapter, /joinProviderUrl\(config\.baseUrl,\s*'\/v1',\s*'\/videos'\)/)
+  // 轮询走 agnesapi，带 video_id 与 model_name（model 取配置值，缺省回退 Flash 默认）
+  assert.match(adapter, /'\/agnesapi'/)
+  assert.match(adapter, /searchParams\.set\('video_id',\s*taskId\)/)
+  assert.match(adapter, /searchParams\.set\('model_name',\s*modelName\)/)
+  // 完成态取顶层 url 字段
+  assert.match(adapter, /videoUrl: result\.url/)
+  // 注册表挂 openai 视频适配器
+  assert.match(registry, /openai: new OpenAIVideoAdapter\(\)/)
 })

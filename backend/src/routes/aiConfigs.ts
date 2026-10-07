@@ -62,6 +62,15 @@ function buildProbe(serviceType: string, provider: string, baseUrl: string, mode
   }
 
   if (p === 'openai') {
+    if (serviceType === 'video') {
+      // OpenAI Videos 兼容接口（如 Agnes）：POST {base}/v1/videos，空请求体验证鉴权与端点连通性
+      return {
+        method: 'POST',
+        url: joinProviderUrl(baseUrl, '/v1', '/videos'),
+        headers: bearerHeaders(apiKey, true),
+        body: {},
+      }
+    }
     return {
       method: 'GET',
       url: joinProviderUrl(baseUrl, '/v1', '/models'),

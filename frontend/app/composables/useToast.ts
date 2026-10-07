@@ -36,17 +36,22 @@ function messageOf(err: unknown): string {
 /**
  * 错误 → 友好文案。分类按优先级短路：
  * 网络 → 非JSON → 审核 → 鉴权 → 限频 → 5xx → 超时 → 短中文透传 → 状态码 → 兜底
+ * 匹配到分类时，若原始错误携带可提取的上游 detail，拼接展示（如 "服务暂时不可用（video queue is full, please retry later）"）
  */
 export function mapError(err: unknown, opts?: { fallback?: string }): string {
   const msg = messageOf(err).trim()
   if (!msg) return opts?.fallback ? t(opts.fallback) : t('errors.unknown')
 
+  // 从 "API error 503: {...}" 中提取上游 message/detail 字段
+  const detail = extractUpstreamDetail(msg)
+  const append = (base: string) => detail ? `${base}（${detail}）` : base
+
   if (err instanceof TypeError && NETWORK_RE.test(msg)) return t('errors.network')
   if (err instanceof SyntaxError || NONJSON_RE.test(msg)) return t('errors.server')
   if (MODERATION_RE.test(msg)) return t('errors.moderation')
-  if (AUTH_RE.test(msg)) return t('errors.auth')
-  if (RATELIMIT_RE.test(msg)) return t('errors.rateLimit')
-  if (SERVER5XX_RE.test(msg)) return t('errors.unavailable')
+  if (AUTH_RE.test(msg)) return append(t('errors.auth'))
+  if (RATELIMIT_RE.test(msg)) return append(t('errors.rateLimit'))
+  if (SERVER5XX_RE.test(msg)) return append(t('errors.unavailable'))
   if (TIMEOUT_RE.test(msg)) return t('errors.timeout')
 
   // 后端友好中文（短、含中文、无技术特征）直接透传
@@ -55,6 +60,18 @@ export function mapError(err: unknown, opts?: { fallback?: string }): string {
   if (/^\d{3}$/.test(msg)) return t('errors.requestFailed', { status: msg })
 
   return opts?.fallback ? t(opts.fallback) : t('errors.unknown')
+}
+
+/** 从 "API error 503: {"code":"x","message":"..."}" 提取上游可读 detail */
+function extractUpstreamDetail(msg: string): string | null {
+  const m = msg.match(/"message"\s*:\s*"([^"]+)"/)
+  if (m) {
+    const val = m[1]
+    if (val && val.length <= 120 && val !== msg) return val
+  }
+  const dm = msg.match(/"detail"\s*:\s*"([^"]+)"/)
+  if (dm && dm[1] && dm[1].length <= 120) return dm[1]
+  return null
 }
 
 /** 统一错误 toast（默认 5s，比成功提示长） */

@@ -28,6 +28,7 @@ import { db, schema } from './db/index.js'
 import { eq } from 'drizzle-orm'
 import { now } from './utils/response.js'
 import { DATA_ROOT } from './utils/paths.js'
+import { startVideoQueueLoop } from './services/video-queue.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(__dirname, '../..')
@@ -98,5 +99,8 @@ db.update(schema.sysTask)
     if (affected > 0) console.log(`🔁 已清理 ${affected} 个中断的生成任务`)
   })
   .catch(err => console.error('清理中断任务失败:', err?.message))
+
+// 视频自动生成队列：每 5 分钟按镜头顺序触发一个未完成视频任务，避免 Agnes 限流
+startVideoQueueLoop()
 
 serve({ fetch: app.fetch, port })

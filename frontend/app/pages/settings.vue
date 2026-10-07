@@ -749,8 +749,12 @@ const serviceTypes = computed(() => [
   { type: 'image', label: t('common.serviceType.image') },
   { type: 'video', label: t('common.serviceType.video') },
 ])
-const providers = ['gemini', 'openai', 'volcengine', 'minimax', 'aliyun']
-const providerSelectOptions = computed(() => providers.map(p => ({ label: p, value: p })))
+const providers = {
+  text: ['gemini', 'openai', 'volcengine'],
+  image: ['gemini', 'openai', 'volcengine'],
+  video: ['aliyun', 'volcengine', 'minimax', 'openai'],
+}
+const providerSelectOptions = computed(() => (providers[cfgForm.service_type] || []).map(p => ({ label: p, value: p })))
 const serviceMeta = computed(() => ({
   text: { label: t('common.serviceType.text'), desc: t('settings.ai.meta.text') },
   image: { label: t('common.serviceType.image'), desc: t('settings.ai.meta.image') },
@@ -769,6 +773,7 @@ const providerPresets = {
     aliyun: { label: '阿里云百炼 Wan 3.0', baseUrl: 'https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com', models: ['wan3.0-video', 'wan3.0-video-prime'] },
     volcengine: { label: 'Seedance 2.0 官方', baseUrl: 'https://ark.cn-beijing.volces.com', models: ['doubao-seedance-2-0-mini-260615', 'doubao-seedance-2-0-fast-260128', 'doubao-seedance-2-0-260128'] },
     minimax: { label: 'MiniMax H3 官方', baseUrl: 'https://api.minimaxi.com', models: ['MiniMax-H3'] },
+    openai: { label: 'Agnes 视频（OpenAI 兼容）', baseUrl: 'https://apihub.agnes-ai.com', models: ['agnes-video-2.5-flash'] },
   },
 }
 const huobaoQuickConfigs = computed(() => {
@@ -878,6 +883,10 @@ function startEditCfg(c) {
     priority: c.priority ?? 0,
     temperature: c.temperature ?? '',
   })
+  // provider 若不在当前 service_type 的合法列表内（历史脏数据），BaseSelect 会把它清成空值导致无法保存，先校正
+  if (!(providers[c.service_type] || []).includes(c.provider)) {
+    cfgForm.provider = (providers[c.service_type] || []).find(p => c.name?.includes(p)) || (providers[c.service_type] || [])[0] || ''
+  }
   cfgDialog.value = true
 }
 async function testCfgPayload(payload) {
