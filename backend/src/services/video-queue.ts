@@ -33,7 +33,7 @@ interface VideoQueueStatus {
 
 let status: VideoQueueStatus = {
   state: 'idle',
-  enabled: true,
+  enabled: false,
   interval_sec: RETRY_INTERVAL_MS / 1000,
 }
 let timer: ReturnType<typeof setInterval> | null = null

@@ -763,7 +763,16 @@
       "confirmNote": "上記の設定でショットごとに生成を開始します。失敗したタスクは後で「失敗を再試行」からまとめて再実行できます。",
       "confirmStart": "生成開始 ({n})",
       "selectMissing": "未生成を選択",
-      "aspectRatio": "アスペクト比"
+      "aspectRatio": "アスペクト比",
+      "deleteSbBtn": "ストーリーボードを削除",
+      "autoQueue": "自動実行",
+      "autoQueueOn": "自動キューを有効にしました",
+      "autoQueueOff": "自動キューを無効にしました"
+    },
+    "deleteSb": {
+      "title": "ストーリーボードを削除",
+      "message": "ストーリーボード「{name}」を削除しますか？恒久的に削除されます。",
+      "deleted": "ストーリーボードを削除しました"
     },
     "inspector": {
       "videoPromptPlaceholder": "{'@'}キャラクター名 / {'@'}シーン名 で参照素材を指定（生成時に参照画像へ自動マッピング）。時間帯ごとに画面の動きとカメラを記述…",

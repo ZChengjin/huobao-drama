@@ -763,7 +763,16 @@
       "confirmNote": "Generation will start shot by shot with the above config; failed tasks can be retried later via \"Retry failed\".",
       "confirmStart": "Start ({n})",
       "selectMissing": "Select without video",
-      "aspectRatio": "Aspect Ratio"
+      "aspectRatio": "Aspect Ratio",
+      "deleteSbBtn": "Delete storyboard",
+      "autoQueue": "Auto-run",
+      "autoQueueOn": "Auto-queue enabled",
+      "autoQueueOff": "Auto-queue disabled"
+    },
+    "deleteSb": {
+      "title": "Delete Storyboard",
+      "message": "Delete storyboard “{name}”? It will be permanently removed.",
+      "deleted": "Storyboard deleted"
     },
     "inspector": {
       "videoPromptPlaceholder": "Reference assets with {'@'}character / {'@'}scene — auto-mapped to reference images on generation; then describe motion and camera per time segment…",

@@ -488,6 +488,16 @@
               <span class="tag mono">{{ t('episode.sb.segmentStat', { n: sbs.length, dur: totalDuration }) }}</span>
               <span class="tag mono" :title="t('episode.vid.aspectRatio')">{{ dramaAspectRatio }}</span>
               <div class="ml-auto flex gap-1">
+                <button
+                  class="btn btn-sm auto-queue-btn"
+                  :class="{ 'is-on': autoQueueOn }"
+                  :disabled="autoQueueLoading"
+                  :title="t('episode.vid.autoQueue')"
+                  @click="toggleAutoQueue"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  {{ t('episode.vid.autoQueue') }}
+                </button>
                 <button class="btn btn-sm" :disabled="rn" @click="doBreakdown">
                   <Loader2 v-if="rt === 'storyboard_breaker'" :size="11" class="animate-spin" />
                   <svg v-else width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -595,14 +605,23 @@
                       <div v-if="videoModerationHint(task.error)" class="video-task-error-hint">{{ videoModerationHint(task.error) }}</div>
                     </div>
                   </div>
-                  <button
-                    class="btn btn-icon btn-sm video-task-action"
-                    :title="videoTaskActionLabel(task.storyboard)"
-                    :disabled="videoTaskState(task.storyboard) === 'pending'"
-                    @click.stop="genVid(task.storyboard)"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                  </button>
+                  <div class="video-task-actions">
+                    <button
+                      class="btn btn-icon btn-sm video-task-action video-task-del"
+                      :title="t('episode.vid.deleteSbBtn')"
+                      @click.stop="askDeleteStoryboard(task)"
+                    >
+                      <Trash2 :size="12" />
+                    </button>
+                    <button
+                      class="btn btn-icon btn-sm video-task-action"
+                      :title="videoTaskActionLabel(task.storyboard)"
+                      :disabled="videoTaskState(task.storyboard) === 'pending'"
+                      @click.stop="genVid(task.storyboard)"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                    </button>
+                  </div>
                 </div>
                 </div>
               </section>
@@ -1422,6 +1441,14 @@
         @confirm="confirmDeleteAsset"
         @cancel="assetDelete.open = false"
       />
+      <ConfirmDialog
+        :open="sbDelete.open"
+        :title="t('episode.deleteSb.title')"
+        :message="t('episode.deleteSb.message', { name: sbDeleteName })"
+        :loading="sbDelete.loading"
+        @confirm="confirmDeleteStoryboard"
+        @cancel="sbDelete.open = false"
+      />
     </main>
     </div>
   </div>
@@ -1432,7 +1459,7 @@ import { toast } from 'vue-sonner'
 import { useI18n } from 'vue-i18n'
 import {
   Users, FileText, FolderKanban, Clapperboard, Download, Loader2,
-  Plus, X, ListTodo, CircleHelp,
+  Plus, X, ListTodo, CircleHelp, Trash2,
 } from 'lucide-vue-next'
 import { api, dramaAPI, episodeAPI, storyboardAPI, characterAPI, sceneAPI, propAPI, taskAPI, mergeAPI, aiConfigAPI, uploadAPI } from '~/composables/useApi'
 import { startTour, autoTour } from '~/composables/useTour'
@@ -1723,6 +1750,55 @@ const assetDeleteName = computed(() => assetDelete.value.item?.name || assetDele
 
 function askDeleteAsset(type, item) {
   assetDelete.value = { open: true, type, item, loading: false }
+}
+
+const sbDelete = ref({ open: false, task: null, loading: false })
+const sbDeleteName = computed(() => sbDelete.value.task?.storyboard?.description || t('episode.vid.shotN', { n: sbDelete.value.task?.index + 1 }))
+
+function askDeleteStoryboard(task) {
+  sbDelete.value = { open: true, task, loading: false }
+}
+
+const autoQueueOn = ref(false)
+const autoQueueLoading = ref(false)
+
+async function fetchAutoQueueStatus() {
+  try {
+    const res = await taskAPI.videoQueueStatus()
+    autoQueueOn.value = !!res?.enabled
+  } catch {}
+}
+
+async function toggleAutoQueue() {
+  if (autoQueueLoading.value) return
+  autoQueueLoading.value = true
+  try {
+    if (autoQueueOn.value) await taskAPI.videoQueueStop()
+    else await taskAPI.videoQueueStart()
+    autoQueueOn.value = !autoQueueOn.value
+    toast.success(t(autoQueueOn.value ? 'episode.vid.autoQueueOn' : 'episode.vid.autoQueueOff'))
+  } catch (e) {
+    toastError(e)
+  } finally {
+    autoQueueLoading.value = false
+  }
+}
+
+async function confirmDeleteStoryboard() {
+  const { task } = sbDelete.value
+  if (!task || sbDelete.value.loading) return
+  sbDelete.value.loading = true
+  try {
+    await storyboardAPI.del(task.id)
+    if (selectedSb.value?.id === task.id) selectedSb.value = null
+    await refresh()
+    toast.success(t('episode.deleteSb.deleted'))
+    sbDelete.value.open = false
+  } catch (e) {
+    toastError(e, { fallback: 'common.deleteFailed' })
+  } finally {
+    sbDelete.value.loading = false
+  }
 }
 
 async function confirmDeleteAsset() {
@@ -3367,7 +3443,7 @@ async function loadConfigs() {
   } catch (e) { console.error('Failed to load AI configs', e) }
 }
 
-onMounted(async () => { await refresh(); loadConfigs(); syncExtractStatus() })
+onMounted(async () => { await refresh(); loadConfigs(); syncExtractStatus(); fetchAutoQueueStatus() })
 
 // ===== 应用内引导（工作台）：沿左侧进度栏走 6 步流水线 =====
 const EPISODE_TOUR = [
@@ -5082,6 +5158,31 @@ button.video-task-metric.on { box-shadow: 0 0 0 2px var(--accent); }
   height: 24px;
   padding: 0;
 }
+.video-task-actions {
+  justify-self: end;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.video-task-actions .video-task-action {
+  justify-self: auto;
+  align-self: auto;
+}
+.video-task-del {
+  color: var(--text-3);
+}
+.video-task-del:hover {
+  color: var(--error);
+  background: var(--error-bg, rgba(239, 68, 68, 0.1));
+}
+.auto-queue-btn {
+  color: var(--text-3);
+}
+.auto-queue-btn.is-on {
+  color: var(--accent-text, var(--accent));
+  background: var(--accent-bg, rgba(var(--accent-rgb, 59, 130, 246), 0.1));
+}
 .video-task-inspector {
   min-width: 0;
   min-height: 0;
@@ -5856,8 +5957,12 @@ button.video-task-metric.on { box-shadow: 0 0 0 2px var(--accent); }
     grid-template-columns: 56px minmax(0, 1fr);
   }
 
-  .video-task-action {
+  .video-task-actions {
     justify-self: start;
+  }
+
+  .video-task-actions .video-task-action {
+    justify-self: auto;
   }
 
   .image-viewer-overlay {

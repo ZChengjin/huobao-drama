@@ -763,7 +763,16 @@
       "confirmNote": "将按以上配置逐镜头发起生成；失败的任务之后可点「重试失败」一键重跑。",
       "confirmStart": "开始生成 ({n})",
       "selectMissing": "选未生成",
-      "aspectRatio": "画面比例"
+      "aspectRatio": "画面比例",
+      "deleteSbBtn": "删除分镜",
+      "autoQueue": "自动执行",
+      "autoQueueOn": "自动执行已开启",
+      "autoQueueOff": "自动执行已关闭"
+    },
+    "deleteSb": {
+      "title": "删除分镜",
+      "message": "确定删除分镜「{name}」吗？该分镜将永久移除。",
+      "deleted": "分镜已删除"
     },
     "inspector": {
       "videoPromptPlaceholder": "用 {'@'}角色名 / {'@'}场景名 引用参考素材，生成时自动映射为参考图片；再按时间段描述画面运动与镜头…",
