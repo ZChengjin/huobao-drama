@@ -1,0 +1,18 @@
+# Local development image with dependencies preinstalled in named-volume targets.
+FROM node:22-bookworm
+
+# Install from lockfiles without carrying machine-specific/private registry URLs.
+COPY backend/package.json backend/package-lock.json /tmp/backend/
+RUN node -e "const fs=require('fs');const p='/tmp/backend/package-lock.json';const l=JSON.parse(fs.readFileSync(p));for(const x of Object.values(l.packages||{}))delete x.resolved;fs.writeFileSync(p,JSON.stringify(l,null,2))" \
+  && cd /tmp/backend && npm ci --no-audit --no-fund --registry=https://registry.npmjs.org \
+  && mkdir -p /workspace/backend && cp -a node_modules /workspace/backend/node_modules
+
+COPY frontend/ /tmp/frontend/
+RUN node -e "const fs=require('fs');const p='/tmp/frontend/package-lock.json';const l=JSON.parse(fs.readFileSync(p));for(const x of Object.values(l.packages||{}))delete x.resolved;fs.writeFileSync(p,JSON.stringify(l,null,2))" \
+  && cd /tmp/frontend && npm ci --no-audit --no-fund --registry=https://registry.npmjs.org \
+  && mkdir -p /workspace/frontend \
+  && cp -a node_modules /workspace/frontend/node_modules \
+  && mkdir -p /workspace/frontend/.nuxt /workspace/frontend/.output
+
+WORKDIR /workspace
+EXPOSE 5679 3013
