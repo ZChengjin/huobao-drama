@@ -198,6 +198,10 @@
             </div>
             <div class="toolbar-right">
               <span v-if="scriptLen" class="char-count">{{ t('episode.script.charCount', { n: scriptLen }) }}</span>
+              <button v-if="scriptContent" class="btn btn-sm" @click="saveScr">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                {{ t('common.save') }}
+              </button>
               <button v-if="rawContent" class="btn btn-sm" @click="skipRewrite">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="M13 18l6-6-6-6"/></svg>
                 {{ t('episode.script.skipRewrite') }}
@@ -2718,18 +2722,28 @@ async function refresh() {
 }
 
 function saveRaw() { episodeAPI.update(epId.value, { content: localRaw.value }); episode.value.content = localRaw.value }
-function saveScr() { episodeAPI.update(epId.value, { script_content: localScript.value }); episode.value.script_content = localScript.value }
+async function saveScr() {
+  try {
+    await episodeAPI.update(epId.value, { script_content: localScript.value })
+    episode.value.script_content = localScript.value
+    toast.success(t('common.saved'))
+    return true
+  } catch (e) {
+    toastError(e)
+    return false
+  }
+}
 // 发给 Agent 的 message 是功能性提示词而非 UI 文案：产出语言由后端全局「内容语言」指令控制，
 // 这里保持中文不随界面语言变化
 function doRewrite() { saveRaw(); runAgent('script_rewriter', '请读取剧本并改写为格式化剧本，然后保存', dramaId, epId.value, refresh, chatModelOverride(), chatConfigId()) }
-function skipRewrite() {
+async function skipRewrite() {
   const raw = (localRaw.value || rawContent.value || '').trim()
   if (!raw) {
     toast.warning(t('episode.script.rawRequired'))
     return
   }
   localScript.value = raw
-  saveScr()
+  if (!await saveScr()) return
   toast.success(t('episode.script.skipDone'))
   panel.value = 'production'
   prodTab.value = 'assets'

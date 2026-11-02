@@ -38,9 +38,13 @@ export default defineNuxtConfig({
   },
   vite: {
     server: {
+      watch: {
+        usePolling: process.env.NUXT_WATCH_POLLING === 'true',
+        interval: 500,
+      },
       proxy: {
-        '/api': { target: 'http://localhost:5679', changeOrigin: true },
-        '/static': { target: 'http://localhost:5679', changeOrigin: true },
+        '/api': { target: process.env.NUXT_API_PROXY || 'http://localhost:5679', changeOrigin: true },
+        '/static': { target: process.env.NUXT_API_PROXY || 'http://localhost:5679', changeOrigin: true },
       },
     },
   },

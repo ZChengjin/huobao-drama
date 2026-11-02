@@ -30,6 +30,35 @@ services:
       com.centurylinklabs.watchtower.enable: "true"
     restart: unless-stopped
 
+  # 本机源码热更新：docker compose --profile dev up --build dev
+  # 源码文件实时挂载；backend 用 tsx watch，frontend 用 Nuxt dev server。
+  dev:
+    profiles: ["dev"]
+    image: huobao/huobao-drama-dev:local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    ports:
+      - "5679:5679"
+      - "3013:3013"
+    environment:
+      PORT: 5679
+      SQLITE_PATH: /app/data/huobao.sqlite3
+      HUOBAO_DATA_DIR: /app/data
+      WORKSPACE_PATH: /app/data/workspace
+      NUXT_API_PROXY: http://127.0.0.1:5679
+      NUXT_WATCH_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - .:/workspace
+      - huobao-data:/app/data
+      - dev-backend-node-modules:/workspace/backend/node_modules
+      - dev-frontend-node-modules:/workspace/frontend/node_modules
+      - dev-frontend-nuxt:/workspace/frontend/.nuxt
+      - dev-frontend-output:/workspace/frontend/.output
+    command: ["sh", "/workspace/docker/dev-entrypoint.sh"]
+    restart: unless-stopped
+
   watchtower:
     image: containrrr/watchtower:latest
     command: >
@@ -45,3 +74,7 @@ services:
 
 volumes:
   huobao-data:
+  dev-backend-node-modules:
+  dev-frontend-node-modules:
+  dev-frontend-nuxt:
+  dev-frontend-output:
